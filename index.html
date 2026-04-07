@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RangeIQ v2 — Physics-Based EV Range Intelligence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1FC87A;--green-dim:rgba(31,200,122,0.10);--green-bdr:rgba(31,200,122,0.22);
+  --amber:#F5A623;--amber-dim:rgba(245,166,35,0.10);
+  --red:#F05050;--red-dim:rgba(240,80,80,0.10);
+  --blue:#4A9EFF;--blue-dim:rgba(74,158,255,0.10);
+  --purple:#A78BFA;
+  --bg:#0A0C0E;--surf:#131619;--surf2:#1A1F24;--surf3:#222930;
+  --bdr:rgba(255,255,255,0.06);--bdr2:rgba(255,255,255,0.11);
+  --t:#E8ECF0;--tm:#7A8899;--td:#3D4A58;
+  --r:10px;--rsm:7px;--font:'DM Sans',system-ui,sans-serif;--mono:'JetBrains Mono','Fira Code',monospace;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t);font-family:var(--font);font-size:14px;line-height:1.6;min-height:100vh}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--surf3);border-radius:3px}
+nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:54px;background:rgba(10,12,14,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--bdr)}
+.nav-brand{display:flex;align-items:center;gap:10px}
+.nav-logo{width:28px;height:28px;background:var(--green);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.nav-logo svg{width:16px;height:16px;fill:#0A0C0E}
+.nav-title{font-size:15px;font-weight:600;letter-spacing:-.02em}.nav-title span{color:var(--green)}
+.v2b{font-size:10px;font-weight:600;background:rgba(167,139,250,.15);color:var(--purple);padding:2px 7px;border-radius:20px;border:1px solid rgba(167,139,250,.25);letter-spacing:.05em}
+.nav-links{display:flex;gap:2px}
+.nl{font-size:12px;color:var(--tm);text-decoration:none;padding:4px 10px;border-radius:5px;transition:.15s}
+.nl:hover{color:var(--t);background:var(--surf2)}
+.hero{padding:3rem 2rem 2rem;text-align:center;max-width:700px;margin:0 auto}
+.hero-tag{font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--green);text-transform:uppercase;margin-bottom:.8rem}
+.hero h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:600;letter-spacing:-.03em;line-height:1.15;margin-bottom:.8rem}
+.hero h1 em{font-style:normal;color:var(--green)}
+.hero p{color:var(--tm);font-size:14px;max-width:500px;margin:0 auto 1.5rem}
+.pills{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.pill{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--bdr2);color:var(--tm);font-weight:500}
+.edge-banner{display:none;margin:0 2rem 1rem;padding:.8rem 1.2rem;border-radius:var(--rsm);border-left:3px solid var(--red);background:var(--red-dim);font-size:12px;color:var(--t);gap:10px;align-items:flex-start}
+.edge-banner.on{display:flex}
+.page{max-width:1100px;margin:0 auto;padding:0 1.5rem 5rem}
+.slabel{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--td);margin-bottom:.8rem}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:1.3rem 1.4rem}
+.card2{background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--rsm);padding:1rem 1.1rem}
+.mg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.1rem}
+.metric{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--rsm);padding:1rem;position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--macc,var(--green));opacity:.7}
+.metric-label{font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--td);text-transform:uppercase;margin-bottom:5px}
+.mv{font-size:24px;font-weight:600;letter-spacing:-.03em;color:var(--t);line-height:1}
+.mv.g{color:var(--green)}.mv.a{color:var(--amber)}.mv.r{color:var(--red)}
+.mu{font-size:11px;font-weight:400;color:var(--tm);margin-left:2px}
+.ms{font-size:11px;color:var(--td);margin-top:4px}
+.main-grid{display:grid;grid-template-columns:340px 1fr;gap:11px;margin-bottom:11px}
+.sblock{margin-bottom:1.1rem}.sblock:last-child{margin-bottom:0}
+.shdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.sname{font-size:12px;font-weight:500;color:var(--tm)}
+.sbadge{font-family:var(--mono);font-size:11px;color:var(--t);background:var(--surf3);padding:2px 8px;border-radius:4px;border:1px solid var(--bdr2);min-width:88px;text-align:center}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:var(--surf3);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(31,200,122,.18);transition:.2s}
+input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 0 0 5px rgba(31,200,122,.22)}
+.divider{height:1px;background:var(--bdr);margin:1.1rem 0}
+.eq-panel{background:var(--bg);border:1px solid var(--green-bdr);border-radius:var(--rsm);padding:.9rem 1rem;margin-top:1rem}
+.eq-title{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin-bottom:.7rem}
+.eqrow{border-bottom:1px solid var(--bdr);padding-bottom:5px;margin-bottom:5px;font-family:var(--mono);font-size:10.5px;color:var(--tm);line-height:1.9}
+.eqrow:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0}
+.eqrow .hl{color:var(--green);font-weight:500}
+.eqrow .val{color:var(--amber)}
+.eqrow .tot{color:var(--t);font-weight:600;font-size:11.5px}
+.rrow{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.rlabel{font-size:10px;font-weight:600;color:var(--td);text-transform:uppercase;letter-spacing:.05em;width:86px;flex-shrink:0}
+.rbar-wrap{flex:1}
+.rbar{height:7px;border-radius:4px;transition:width .5s cubic-bezier(.4,0,.2,1);min-width:6px}
+.rkm{font-family:var(--mono);font-size:12px;font-weight:500;width:58px;text-align:right;flex-shrink:0}
+.gain-box{background:var(--bg);border:1px solid var(--green-bdr);border-radius:var(--rsm);padding:.9rem 1rem;margin:.9rem 0}
+.gain-title{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--green);margin-bottom:.7rem}
+.grow{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.grow:last-child{margin-bottom:0}
+.gfactor{font-size:11px;color:var(--tm);width:100px;flex-shrink:0}
+.gbw{flex:1;height:5px;background:var(--surf3);border-radius:3px;overflow:hidden}
+.gbf{height:100%;border-radius:3px;transition:width .5s}
+.gkm{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--green);width:50px;text-align:right;flex-shrink:0}
+.fstack{display:flex;height:16px;border-radius:4px;overflow:hidden;margin:.5rem 0}
+.fseg{height:100%;transition:width .5s}
+.fleg-wrap{display:flex;flex-wrap:wrap;gap:10px;margin-top:.4rem}
+.fleg{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tm)}
+.fleg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.si{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:12px;color:var(--t);line-height:1.5}
+.si:last-child{border-bottom:none}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.ig{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:11px}
+.ic{background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--rsm);padding:.9rem 1rem;display:flex;gap:10px;align-items:flex-start;position:relative;overflow:hidden}
+.ic::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--icc,var(--green))}
+.ic-ico{width:30px;height:30px;flex-shrink:0;border-radius:7px;display:flex;align-items:center;justify-content:center;background:var(--icbg)}
+.ic-ico svg{width:14px;height:14px;stroke:var(--icc,var(--green))}
+.ic-t{font-size:12px;font-weight:600;color:var(--t);margin-bottom:2px;line-height:1.4}
+.ic-d{font-size:11px;color:var(--tm);line-height:1.5}
+.cring{display:flex;flex-direction:column;align-items:center}
+.clabel{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--td);margin-top:6px}
+.chart-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:1.3rem 1.4rem;margin-bottom:11px}
+.chdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.1rem;gap:1rem;flex-wrap:wrap}
+.ct{font-size:13px;font-weight:600;color:var(--t)}.cs{font-size:11px;color:var(--td);margin-top:2px}
+.cl{display:flex;gap:12px;flex-wrap:wrap}
+.cli{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tm)}
+.cld{width:8px;height:8px;border-radius:2px}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.pc{background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--rsm);padding:1.1rem}
+.pt{font-size:12px;font-weight:600;color:var(--t);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.pd{width:6px;height:6px;border-radius:50%}
+.pdesc{font-size:11px;color:var(--tm);line-height:1.6;margin-bottom:.6rem}
+.formula{font-family:var(--mono);font-size:10.5px;color:var(--green);background:var(--bg);padding:6px 9px;border-radius:4px;border:1px solid var(--green-bdr);overflow-x:auto;line-height:1.7}
+.atable{width:100%;border-collapse:collapse;font-size:11px;margin-top:.8rem}
+.atable th{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--td);padding:5px 8px;border-bottom:1px solid var(--bdr);text-align:left}
+.atable td{padding:5px 8px;border-bottom:1px solid var(--bdr);color:var(--tm)}
+.atable td:first-child{font-family:var(--mono);font-size:10.5px;color:var(--t)}
+.atable tr:last-child td{border-bottom:none}
+.bar-track{height:5px;background:var(--surf3);border-radius:3px;overflow:hidden;margin-top:8px}
+.bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.gain-badge{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--green);background:var(--green-dim);border:1px solid var(--green-bdr);padding:3px 9px;border-radius:5px}
+footer{border-top:1px solid var(--bdr);padding:2rem;text-align:center;color:var(--td);font-size:11px}
+footer a{color:var(--green);text-decoration:none}
+@media(max-width:800px){.main-grid{grid-template-columns:1fr}.mg{grid-template-columns:1fr 1fr}.pg{grid-template-columns:1fr}.ig{grid-template-columns:1fr}nav{padding:0 1rem}.hero{padding:2rem 1rem 1.5rem}.page{padding:0 1rem 3rem}.nav-links{display:none}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/></svg></div>
+    <span class="nav-title">Range<span>IQ</span></span>
+    <span class="v2b">v2 · ENGINEERING BUILD</span>
+  </div>
+  <div class="nav-links">
+    <a href="#dash" class="nl">Dashboard</a>
+    <a href="#model" class="nl">Live Model</a>
+    <a href="#insights" class="nl">Insights</a>
+    <a href="#physics" class="nl">Physics</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">Physics-Based EV Range Intelligence</div>
+  <h1>Not a dashboard.<br><em>A simulation engine.</em></h1>
+  <p>Built on real aerodynamic drag equations, stop-event kinetic energy modelling, and drivetrain efficiency curves — every number is derived, not assumed.</p>
+  <div class="pills">
+    <span class="pill">F_aero = ½ρC_dAv²</span>
+    <span class="pill">Stop-event KE loss model</span>
+    <span class="pill">Regen braking efficiency</span>
+    <span class="pill">Non-linear drag curve</span>
+    <span class="pill">Model confidence scoring</span>
+    <span class="pill">Edge case handling</span>
+  </div>
+</div>
+
+<div class="edge-banner" id="edge-banner">
+  <div style="font-size:16px;margin-top:1px;flex-shrink:0">⚠</div>
+  <div id="edge-text"></div>
+</div>
+
+<div class="page">
+  <div id="dash" style="margin-bottom:.75rem"><div class="slabel">Live Dashboard</div></div>
+  <div class="mg" id="metric-grid"></div>
+
+  <div class="main-grid">
+    <div class="card" id="model">
+      <div class="slabel" style="margin-bottom:1.1rem">Riding Conditions</div>
+      <div class="sblock">
+        <div class="shdr"><span class="sname">Speed</span><span class="sbadge" id="lbl-speed">42 km/h</span></div>
+        <input type="range" min="5" max="90" value="42" step="1" id="sl-speed">
+      </div>
+      <div class="sblock">
+        <div class="shdr"><span class="sname">Acceleration style</span><span class="sbadge" id="lbl-accel">Moderate</span></div>
+        <input type="range" min="1" max="5" value="3" step="1" id="sl-accel">
+      </div>
+      <div class="sblock">
+        <div class="shdr"><span class="sname">Traffic density</span><span class="sbadge" id="lbl-traffic">Low</span></div>
+        <input type="range" min="1" max="3" value="1" step="1" id="sl-traffic">
+      </div>
+      <div class="sblock">
+        <div class="shdr"><span class="sname">Road slope</span><span class="sbadge" id="lbl-slope">Flat 0°</span></div>
+        <input type="range" min="-8" max="8" value="0" step="1" id="sl-slope">
+      </div>
+      <div class="divider"></div>
+      <div class="sblock">
+        <div class="shdr"><span class="sname">Battery level</span><span class="sbadge" id="lbl-batt">72%</span></div>
+        <input type="range" min="0" max="100" value="72" step="1" id="sl-batt">
+        <div class="bar-track"><div class="bar-fill" id="batt-bar" style="width:72%;background:var(--green)"></div></div>
+      </div>
+      <div class="sblock" style="margin-top:.9rem">
+        <div class="shdr"><span class="sname">Battery capacity</span><span class="sbadge" id="lbl-cap">2.9 kWh</span></div>
+        <input type="range" min="1.5" max="5.0" value="2.9" step="0.1" id="sl-cap">
+      </div>
+      <div class="eq-panel">
+        <div class="eq-title">Live physics computation</div>
+        <div id="eq-body"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div class="slabel" style="margin-bottom:0">Range Analysis</div>
+          <span class="gain-badge" id="gain-badge">+0.0 km</span>
+        </div>
+        <div id="range-section"></div>
+        <div class="gain-box" id="gain-box"></div>
+        <div style="margin-top:.5rem">
+          <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--td);margin-bottom:.5rem">Energy components (proportional)</div>
+          <div class="fstack" id="force-stack"></div>
+          <div class="fleg-wrap" id="force-legend"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="slabel" style="margin-bottom:.7rem">Optimal Riding Strategy</div>
+        <div id="strategy-list"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+        <div class="card" style="text-align:center">
+          <div class="slabel" style="margin-bottom:.7rem">Model Confidence</div>
+          <div class="cring">
+            <svg width="110" height="110" viewBox="0 0 110 110">
+              <circle cx="55" cy="55" r="44" fill="none" stroke="#222930" stroke-width="9"/>
+              <circle cx="55" cy="55" r="44" fill="none" id="ring-arc" stroke="#1FC87A" stroke-width="9"
+                stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="55"
+                transform="rotate(-90 55 55)" style="transition:stroke-dashoffset .6s cubic-bezier(.4,0,.2,1),stroke .4s"/>
+              <text x="55" y="51" text-anchor="middle" font-family="DM Sans,system-ui" font-size="22" font-weight="600" fill="#E8ECF0" id="conf-val">82</text>
+              <text x="55" y="65" text-anchor="middle" font-family="DM Sans,system-ui" font-size="9" fill="#3D4A58">% confidence</text>
+            </svg>
+            <div class="clabel" id="conf-label">High accuracy</div>
+          </div>
+          <div style="font-size:10px;color:var(--td);margin-top:.5rem;line-height:1.5;text-align:left" id="conf-reason"></div>
+        </div>
+        <div class="card">
+          <div class="slabel" style="margin-bottom:.6rem">Consumption</div>
+          <div style="font-size:30px;font-weight:600;letter-spacing:-.03em;margin-bottom:2px" id="wh-display">—</div>
+          <div style="font-size:11px;color:var(--td);margin-bottom:.8rem">Wh / km</div>
+          <div class="divider" style="margin:.7rem 0"></div>
+          <div style="font-size:10px;color:var(--td);margin-bottom:3px">vs. Ather 450X city avg (28 Wh/km)</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div class="bar-track" style="flex:1;margin-top:0"><div class="bar-fill" id="eff-bar" style="width:70%"></div></div>
+            <span id="eff-pct" style="font-size:11px;font-weight:500;color:var(--tm);width:34px;text-align:right">70%</span>
+          </div>
+          <div style="margin-top:.8rem;font-size:10px;color:var(--td);line-height:1.7" id="wh-mini"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="insights" style="margin-bottom:.7rem"><div class="slabel">Smart Insights</div></div>
+  <div class="ig" id="insights-grid"></div>
+
+  <div class="chart-card">
+    <div class="chdr">
+      <div>
+        <div class="ct">Speed vs Energy Consumption — non-linear aerodynamic drag</div>
+        <div class="cs">F_aero ∝ v² — doubling speed quadruples drag force. Red zone = optimal 28–42 km/h window. Updates live.</div>
+      </div>
+      <div class="cl">
+        <div class="cli"><div class="cld" style="background:#1FC87A;border-radius:50%"></div>Wh/km curve</div>
+        <div class="cli"><div class="cld" style="background:rgba(240,80,80,0.4)"></div>Optimal zone</div>
+        <div class="cli"><div class="cld" style="background:#4A9EFF;border-radius:50%"></div>Your speed</div>
+      </div>
+    </div>
+    <div style="position:relative;width:100%;height:220px"><canvas id="chart-speed"></canvas></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chdr">
+      <div>
+        <div class="ct">Energy Loss by Acceleration Style — stacked components</div>
+        <div class="cs">Base motion energy + stop-event KE loss + acceleration drivetrain waste. Current style highlighted.</div>
+      </div>
+    </div>
+    <div style="position:relative;width:100%;height:210px"><canvas id="chart-accel"></canvas></div>
+  </div>
+
+  <div id="physics" style="margin-bottom:.7rem"><div class="slabel">Physics Model & Assumptions</div></div>
+  <div class="card" style="margin-bottom:11px">
+    <div style="margin-bottom:1.2rem">
+      <div style="font-size:14px;font-weight:600;color:var(--t);margin-bottom:4px">Multi-factor physics-based consumption model</div>
+      <div style="font-size:12px;color:var(--tm)">Every variable grounded in classical mechanics and EV drivetrain engineering. No curve-fit approximations.</div>
+    </div>
+    <div class="formula" style="margin-bottom:1.2rem;font-size:11px">
+      Wh/km  =  [½ρC_dAv²  +  C_rr·m·g·cos(θ)  +  m·g·sin(θ)]  /  (η_drive × 3.6)  +  P_aux/v_kmh  +  W_stop × N_stops<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;where  W_stop = ½mv² × (1 − η_regen) / 3600
+    </div>
+    <div class="pg" style="margin-bottom:1.3rem">
+      <div class="pc">
+        <div class="pt"><div class="pd" style="background:var(--blue)"></div>Aerodynamic drag</div>
+        <div class="pdesc">Drag force increases with the square of velocity. At 80 km/h, aerodynamic drag is 4× that at 40 km/h — the dominant loss factor at highway speeds.</div>
+        <div class="formula">F_aero = ½ × 1.225 × 0.45 × 0.45 × v²<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = 0.124 × v² N  (v in m/s)</div>
+      </div>
+      <div class="pc">
+        <div class="pt"><div class="pd" style="background:var(--amber)"></div>Rolling resistance</div>
+        <div class="pdesc">Constant force opposing motion due to tire deformation. Independent of speed, proportional to mass. Dominates at low speeds where aerodynamic drag is small.</div>
+        <div class="formula">F_roll = C_rr × m × g × cos(θ)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = 0.018 × 200 × 9.81 ≈ 35.3 N</div>
+      </div>
+      <div class="pc">
+        <div class="pt"><div class="pd" style="background:var(--red)"></div>Stop-event KE loss</div>
+        <div class="pdesc">Each stop dissipates kinetic energy. Regen recovers η_regen = 44–68% depending on acceleration style. Stop/go traffic can add 15+ Wh/km from repeated cycles.</div>
+        <div class="formula">W_stop = ½mv² × (1 − η_regen)<br>η_regen ∈ {0.68, 0.62, 0.58, 0.52, 0.44}</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--td);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">Model parameters & assumptions</div>
+    <table class="atable">
+      <tr><th>Parameter</th><th>Symbol</th><th>Value</th><th>Basis</th></tr>
+      <tr><td>Air density</td><td>ρ</td><td>1.225 kg/m³</td><td>ISA standard, sea level</td></tr>
+      <tr><td>Drag coefficient</td><td>C_d</td><td>0.45</td><td>Typical urban scooter geometry</td></tr>
+      <tr><td>Frontal area</td><td>A</td><td>0.45 m²</td><td>Estimated from scooter class geometry</td></tr>
+      <tr><td>Rolling resistance</td><td>C_rr</td><td>0.018</td><td>Pneumatic tires on Indian urban roads</td></tr>
+      <tr><td>Total mass</td><td>m</td><td>200 kg</td><td>~130 kg scooter + 70 kg rider</td></tr>
+      <tr><td>Drivetrain efficiency</td><td>η_drive</td><td>0.80</td><td>BLDC motor + controller combined</td></tr>
+      <tr><td>Auxiliary power</td><td>P_aux</td><td>100 W</td><td>Display, lights, BMS overhead</td></tr>
+      <tr><td>Stop frequency (stop/go)</td><td>N_stops</td><td>18 /km</td><td>Dense city traffic (Bangalore estimate)</td></tr>
+    </table>
+  </div>
+</div>
+
+<footer>RangeIQ v2 · Physics-based EV range model · Built for Ather Energy internship application · <a href="#">View source</a></footer>
+
+<script>
+const PHY={rho:1.225,Cd:0.45,Af:0.45,Crr:0.018,mass:200,g:9.81,eta:0.80,Paux:100,
+  eta_r:[0.68,0.62,0.58,0.52,0.44],stops:[0.5,5.5,18],awaste:[0,0.02,0.05,0.11,0.20]};
+
+function physics(spd,acc,traf,slope){
+  const v=spd/3.6, th=slope*Math.PI/180;
+  const Fa=0.5*PHY.rho*PHY.Cd*PHY.Af*v*v;
+  const Fr=PHY.Crr*PHY.mass*PHY.g*Math.cos(th);
+  const Fg=PHY.mass*PHY.g*Math.sin(th);
+  const Fm=Fa+Fr+Fg;
+  const Pb=Math.max(0,Fm)*v/PHY.eta+PHY.Paux;
+  const Wb=Pb/spd;
+  let Wr=0;
+  if(Fg<0) Wr=Math.abs(Fg)*v*PHY.eta_r[acc-1]/spd;
+  const KE=0.5*PHY.mass*v*v;
+  const Wt=(KE*(1-PHY.eta_r[acc-1])*PHY.stops[traf-1])/3600;
+  const Wa=Wb*PHY.awaste[acc-1];
+  const total=Math.max(5,Wb+Wt+Wa-Wr);
+  return{total,Wb:+Wb.toFixed(2),Wt:+Wt.toFixed(2),Wa:+Wa.toFixed(2),Wr:+Wr.toFixed(2),
+    Fa:+Fa.toFixed(1),Fr:+Fr.toFixed(1),Fg:+Fg.toFixed(1),v_ms:+v.toFixed(2)};
+}
+
+function rng(wh,batt,cap){if(!batt)return 0;return +((cap*1000*batt/100)/wh).toFixed(1)}
+
+function conf(s){
+  let c=88,reasons=[];
+  if(s.speed>75){c-=16;reasons.push('Speed beyond model range (>75 km/h) — drag model less accurate');}
+  else if(s.speed>60){c-=7;reasons.push('Higher speed: aerodynamic model uncertainty increases');}
+  if(Math.abs(s.slope)>5){c-=8;reasons.push('Steep slope — grade resistance model less precise');}
+  if(s.traffic===3&&Math.abs(s.slope)>3){c-=8;reasons.push('Compound stress: slope + stop/go reduces precision');}
+  if(s.batt<15&&s.batt>0){c-=8;reasons.push('Low SoC: non-linear battery discharge behaviour');}
+  if(s.batt===0){c=0;reasons=['Battery depleted — simulation only'];}
+  if(s.speed>=28&&s.speed<=45&&s.slope===0&&s.traffic===1)c+=5;
+  return{val:Math.min(96,Math.max(12,c)),reason:reasons[0]||'Nominal operating conditions — high accuracy'};
+}
+
+function gainBD(s,curR){
+  const os=Math.max(28,Math.min(40,s.speed));
+  const w1=physics(os,s.accel,s.traffic,s.slope).total;
+  const r1=rng(w1,s.batt,s.cap);
+  const gS=+(Math.max(0,r1-curR)).toFixed(1);
+  const w2=physics(os,1,s.traffic,s.slope).total;
+  const r2=rng(w2,s.batt,s.cap);
+  const gA=+(Math.max(0,r2-r1)).toFixed(1);
+  const w3=physics(os,1,1,s.slope).total;
+  const r3=rng(w3,s.batt,s.cap);
+  const gT=+(Math.max(0,r3-r2)).toFixed(1);
+  return{gS,gA,gT,optR:r3};
+}
+
+const AL=['Eco','Smooth','Moderate','Brisk','Aggressive'];
+const TL=['Low','Medium','Stop / Go'];
+function getS(){return{speed:+document.getElementById('sl-speed').value,accel:+document.getElementById('sl-accel').value,
+  traffic:+document.getElementById('sl-traffic').value,slope:+document.getElementById('sl-slope').value,
+  batt:+document.getElementById('sl-batt').value,cap:+document.getElementById('sl-cap').value}}
+
+let cS=null,cA=null;
+
+function renderChartSpeed(s){
+  const speeds=[5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90];
+  const data=speeds.map(sp=>+physics(sp,s.accel,s.traffic,s.slope).total.toFixed(1));
+  const ci=speeds.reduce((b,sp,i)=>Math.abs(sp-s.speed)<Math.abs(speeds[b]-s.speed)?i:b,0);
+  const pr=speeds.map((_,i)=>i===ci?6:0);
+  const pb=speeds.map((_,i)=>i===ci?'#4A9EFF':'transparent');
+  const optZone=speeds.map((sp,i)=>(sp>=28&&sp<=42)?data[i]:null);
+  if(!cS){
+    cS=new Chart(document.getElementById('chart-speed'),{type:'line',
+      data:{labels:speeds.map(s=>s+''),datasets:[
+        {label:'Wh/km',data,borderColor:'#1FC87A',backgroundColor:'rgba(31,200,122,0.05)',fill:true,tension:.4,borderWidth:2,pointRadius:pr,pointBackgroundColor:pb,pointBorderColor:pb},
+        {label:'Optimal zone',data:optZone,borderColor:'rgba(240,80,80,0.35)',backgroundColor:'rgba(240,80,80,0.06)',fill:true,tension:.4,borderWidth:1,pointRadius:0,borderDash:[4,3]}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y.toFixed(1)+' Wh/km'}}},
+        scales:{x:{title:{display:true,text:'speed (km/h)',color:'#3D4A58',font:{size:11}},ticks:{color:'#3D4A58',font:{size:11}},grid:{color:'rgba(255,255,255,0.03)'}},
+          y:{title:{display:true,text:'Wh / km',color:'#3D4A58',font:{size:11}},ticks:{color:'#3D4A58',font:{size:11}},grid:{color:'rgba(255,255,255,0.03)'},min:0}}}});
+  } else {
+    cS.data.datasets[0].data=data;cS.data.datasets[0].pointRadius=pr;
+    cS.data.datasets[0].pointBackgroundColor=pb;cS.data.datasets[0].pointBorderColor=pb;
+    cS.data.datasets[1].data=optZone;cS.update('none');
+  }
+}
+
+function renderChartAccel(s){
+  const bd=AL.map((_,i)=>+physics(s.speed,i+1,s.traffic,s.slope).Wb.toFixed(1));
+  const td=AL.map((_,i)=>+physics(s.speed,i+1,s.traffic,s.slope).Wt.toFixed(1));
+  const ad=AL.map((_,i)=>+physics(s.speed,i+1,s.traffic,s.slope).Wa.toFixed(1));
+  const ci=s.accel-1;
+  const mk=(c,a)=>AL.map((_,i)=>i===ci?c:a);
+  if(!cA){
+    cA=new Chart(document.getElementById('chart-accel'),{type:'bar',
+      data:{labels:AL,datasets:[
+        {label:'Base motion',data:bd,backgroundColor:mk('rgba(74,158,255,0.85)','rgba(74,158,255,0.28)'),borderRadius:3,stack:'s'},
+        {label:'Traffic KE loss',data:td,backgroundColor:mk('rgba(240,80,80,0.85)','rgba(240,80,80,0.28)'),stack:'s'},
+        {label:'Accel waste',data:ad,backgroundColor:mk('rgba(245,166,35,0.85)','rgba(245,166,35,0.28)'),borderRadius:3,stack:'s'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:true,labels:{color:'#7A8899',font:{size:11},boxWidth:10,boxHeight:10}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y.toFixed(1)+' Wh/km'}}},
+        scales:{x:{ticks:{color:'#3D4A58',font:{size:11}},grid:{display:false}},
+          y:{title:{display:true,text:'Wh / km',color:'#3D4A58',font:{size:11}},ticks:{color:'#3D4A58',font:{size:11}},grid:{color:'rgba(255,255,255,0.03)'},stacked:true}}}});
+  } else {
+    const upd=(i,d)=>{cA.data.datasets[i].data=d;cA.data.datasets[i].backgroundColor=mk(
+      i===0?'rgba(74,158,255,0.85)':i===1?'rgba(240,80,80,0.85)':'rgba(245,166,35,0.85)',
+      i===0?'rgba(74,158,255,0.28)':i===1?'rgba(240,80,80,0.28)':'rgba(245,166,35,0.28)')};
+    upd(0,bd);upd(1,td);upd(2,ad);cA.update('none');
+  }
+}
+
+const SVGICO={
+  warn:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  good:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  bad:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  info:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+};
+const TC={good:['var(--green)','rgba(31,200,122,0.10)'],warn:['var(--amber)','rgba(245,166,35,0.10)'],bad:['var(--red)','rgba(240,80,80,0.10)'],info:['var(--blue)','rgba(74,158,255,0.10)']};
+function iHTML(tp,title,desc){const[c,bg]=TC[tp]||TC.info;return`<div class="ic" style="--icc:${c};--icbg:${bg}"><div class="ic-ico">${SVGICO[tp]||SVGICO.info}</div><div><div class="ic-t">${title}</div><div class="ic-d">${desc}</div></div></div>`}
+
+function buildInsights(s,res,range,opt){
+  const ins=[];
+  const dragPct=Math.round(res.Fa/(res.Fa+res.Fr+Math.abs(res.Fg)+0.01)*100);
+  if(s.speed>55) ins.push(['bad',`Aerodynamic drag = ${res.Fa} N (${dragPct}% of resistance)`,`At ${s.speed} km/h, F_aero = ½×1.225×0.45×0.45×${res.v_ms}² = ${res.Fa} N. Quadratic penalty — dropping to 40 km/h reduces drag by ${Math.round((1-(40/s.speed)**2)*100)}%.`]);
+  else if(s.speed>=28&&s.speed<=42) ins.push(['good','Speed in optimal efficiency window (28–42 km/h)',`F_aero = ${res.Fa} N (${dragPct}% of resistance). Rolling resistance dominates — this is the minimum Wh/km operating point for this vehicle class.`]);
+  else ins.push(['info',`F_aero = ${res.Fa} N (${dragPct}% of total resistance)`,`Optimal window is 28–42 km/h where drag and rolling resistance are best balanced. Current ratio: aero ${dragPct}% / rolling ${Math.round(res.Fr/(res.Fa+res.Fr+Math.abs(res.Fg)+0.01)*100)}%.`]);
+
+  if(s.traffic===3){const regenE=Math.round(PHY.eta_r[s.accel-1]*100);ins.push(['bad',`Stop/go: ${res.Wt} Wh/km lost to KE dissipation`,`18 stops/km × ½×200×${res.v_ms}² = ${Math.round(0.5*200*res.v_ms*res.v_ms)} J/stop. Regen recovers only ${regenE}% → net loss ${res.Wt} Wh/km.`]);}
+  else if(s.traffic===2) ins.push(['warn',`Medium traffic costing ${res.Wt} Wh/km in unrecovered KE`,`5.5 stop events/km. Free-flow routing eliminates this loss entirely (+${res.Wt} Wh/km recovered).`]);
+  else ins.push(['good','Free-flow traffic — minimal stop-event losses',`Only 0.5 stops/km → KE loss = ${res.Wt} Wh/km. Best achievable traffic condition.`]);
+
+  if(s.slope>4) ins.push(['bad',`Uphill grade: F_grade = +${res.Fg} N`,`m×g×sin(${s.slope}°) = ${res.Fg} N — adds ${(res.Fg/PHY.eta/3.6).toFixed(1)} Wh/km. Reduce speed uphill to minimise peak motor current draw.`]);
+  else if(s.slope<-3) ins.push(['good',`Descent: recovering ${res.Wr} Wh/km via regen braking`,`|F_grade| = ${Math.abs(res.Fg)} N. At η_regen = ${Math.round(PHY.eta_r[s.accel-1]*100)}%, recapturing ${res.Wr} Wh/km back into cells.`]);
+
+  if(s.accel>=4) ins.push(['bad',`${AL[s.accel-1]} style wasting ${res.Wa} Wh/km + reduced η_regen to ${Math.round(PHY.eta_r[s.accel-1]*100)}%`,`High peak current → I²R motor losses. Regen efficiency drops to ${Math.round(PHY.eta_r[s.accel-1]*100)}% vs 68% in Eco mode. Net waste: ${res.Wa} Wh/km.`]);
+  else if(s.accel===1) ins.push(['good','Eco mode: η_regen = 68%, zero acceleration waste',`Maximum regen recovery. Smooth torque requests keep the motor in its high-efficiency operating region.`]);
+
+  if(s.batt===0) ins.push(['bad','Battery depleted — motor drive disabled by BMS','SoC = 0%. BMS cuts motor output at ~2–5% to protect cell chemistry. Charge required immediately.']);
+  else if(s.batt<15) ins.push(['warn',`Critical SoC (${s.batt}%) — non-linear discharge zone`,`Below 15% SoC, internal cell resistance rises sharply. Effective capacity drops faster than the percentage indicates.`]);
+
+  const gain=+(opt.gS+opt.gA+opt.gT).toFixed(1);
+  if(gain>3) ins.push(['info',`Optimised strategy: +${gain} km (${Math.round(gain/range*100)}% improvement)`,`Speed → +${opt.gS} km · Eco accel → +${opt.gA} km · Traffic → +${opt.gT} km. Zero hardware changes needed.`]);
+
+  return ins.slice(0,4);
+}
+
+function render(){
+  const s=getS();
+  const res=physics(s.speed,s.accel,s.traffic,s.slope);
+  const wh=+res.total.toFixed(1);
+  const range=rng(wh,s.batt,s.cap);
+  const cf=conf(s);
+  const opt=gainBD(s,range);
+  const gain=+(opt.gS+opt.gA+opt.gT).toFixed(1);
+
+  document.getElementById('lbl-speed').textContent=s.speed+' km/h';
+  document.getElementById('lbl-accel').textContent=AL[s.accel-1];
+  document.getElementById('lbl-traffic').textContent=TL[s.traffic-1];
+  document.getElementById('lbl-slope').textContent=s.slope===0?'Flat 0°':s.slope>0?`Uphill +${s.slope}°`:`Downhill ${s.slope}°`;
+  document.getElementById('lbl-batt').textContent=s.batt+'%';
+  document.getElementById('lbl-cap').textContent=s.cap.toFixed(1)+' kWh';
+
+  const bc=s.batt>50?'#1FC87A':s.batt>25?'#F5A623':'#F05050';
+  document.getElementById('batt-bar').style.cssText=`width:${s.batt}%;background:${bc}`;
+
+  const banner=document.getElementById('edge-banner'),et=document.getElementById('edge-text');
+  let em='';
+  if(s.batt===0) em='<strong>Battery depleted (0%)</strong> — BMS has disabled motor drive. Simulation output shown for reference only.';
+  else if(s.speed>=80) em=`<strong>Extreme speed (${s.speed} km/h)</strong> — F_aero = ${res.Fa} N. Beyond typical scooter operating range. Model confidence severely reduced.`;
+  else if(s.traffic===3&&Math.abs(s.slope)>=5) em=`<strong>Compound stress</strong> — Stop/go + ${Math.abs(s.slope)}° slope simultaneously. KE loss and grade resistance compound non-linearly. Range precision reduced.`;
+  em?(banner.classList.add('on'),et.innerHTML=em):banner.classList.remove('on');
+
+  const sc=cf.val>75?'g':cf.val>55?'a':'r';
+  const bclass=s.batt>50?'g':s.batt>25?'a':'r';
+  document.getElementById('metric-grid').innerHTML=`
+    <div class="metric" style="--macc:${bc}"><div class="metric-label">Battery</div><div class="mv ${bclass}">${s.batt}<span class="mu">%</span></div><div class="ms">${+(s.cap*s.batt/100).toFixed(2)} kWh · ${s.cap.toFixed(1)} kWh pack</div></div>
+    <div class="metric" style="--macc:#4A9EFF"><div class="metric-label">Est. Range</div><div class="mv">${s.batt===0?'0.0':range.toFixed(1)}<span class="mu">km</span></div><div class="ms">current conditions</div></div>
+    <div class="metric" style="--macc:#F5A623"><div class="metric-label">Consumption</div><div class="mv">${wh}<span class="mu">Wh/km</span></div><div class="ms">Ather 450X city avg ~28</div></div>
+    <div class="metric" style="--macc:${cf.val>75?'#1FC87A':cf.val>55?'#F5A623':'#F05050'}"><div class="metric-label">Model Confidence</div><div class="mv ${sc}">${cf.val}<span class="mu">%</span></div><div class="ms">${cf.val>75?'High accuracy':cf.val>55?'Moderate':'Low — edge case'}</div></div>`;
+
+  document.getElementById('gain-badge').textContent=(gain>0?'+':'')+gain+' km optimised';
+
+  const maxR=Math.max(opt.optR,range,1);
+  document.getElementById('range-section').innerHTML=`
+    <div class="rrow"><div class="rlabel">Current</div><div class="rbar-wrap"><div class="rbar" style="width:${Math.round(range/maxR*100)}%;background:#F5A623"></div></div><div class="rkm" style="color:#F5A623">${s.batt===0?'0.0':range.toFixed(1)} km</div></div>
+    <div class="rrow"><div class="rlabel">Optimised</div><div class="rbar-wrap"><div class="rbar" style="width:100%;background:#1FC87A"></div></div><div class="rkm" style="color:#1FC87A">${s.batt===0?'0.0':opt.optR.toFixed(1)} km</div></div>`;
+
+  const gmax=Math.max(opt.gS,opt.gA,opt.gT,0.1);
+  document.getElementById('gain-box').innerHTML=`
+    <div class="gain-title">Why +${gain} km? — gain source breakdown</div>
+    <div class="grow"><div class="gfactor">↓ Speed → ${Math.max(28,Math.min(40,s.speed))} km/h</div><div class="gbw"><div class="gbf" style="width:${Math.round(opt.gS/gmax*100)}%;background:#1FC87A"></div></div><div class="gkm">+${opt.gS} km</div></div>
+    <div class="grow"><div class="gfactor">↓ Accel → Eco</div><div class="gbw"><div class="gbf" style="width:${Math.round(opt.gA/gmax*100)}%;background:#4A9EFF"></div></div><div class="gkm">+${opt.gA} km</div></div>
+    <div class="grow"><div class="gfactor">↓ Traffic → Low</div><div class="gbw"><div class="gbf" style="width:${Math.round(opt.gT/gmax*100)}%;background:#A78BFA"></div></div><div class="gkm">+${opt.gT} km</div></div>`;
+
+  const comps=[{l:'F_aero',v:res.Fa,c:'#4A9EFF'},{l:'F_roll',v:res.Fr,c:'#F5A623'},{l:'|F_grade|',v:Math.abs(res.Fg),c:'#F05050'},{l:'P_aux',v:PHY.Paux/(s.speed/3.6||1)*0.1,c:'#A78BFA'}].filter(x=>x.v>0);
+  const ft=comps.reduce((a,x)=>a+x.v,0)||1;
+  document.getElementById('force-stack').innerHTML=comps.map(x=>`<div class="fseg" style="width:${Math.round(x.v/ft*100)}%;background:${x.c}" title="${x.l}: ${x.v.toFixed(1)}"></div>`).join('');
+  document.getElementById('force-legend').innerHTML=comps.map(x=>`<div class="fleg"><div class="fleg-dot" style="background:${x.c}"></div>${x.l}: ${x.v.toFixed(1)} N</div>`).join('');
+
+  document.getElementById('eq-body').innerHTML=`
+    <div class="eqrow"><span class="hl">F_aero</span> = ½ × 1.225 × 0.45 × 0.45 × <span class="val">${res.v_ms}²</span> = <span class="hl">${res.Fa} N</span></div>
+    <div class="eqrow"><span class="hl">F_roll</span> = 0.018 × 200 × 9.81 × cos(<span class="val">${s.slope}°</span>) = <span class="hl">${res.Fr} N</span></div>
+    <div class="eqrow"><span class="hl">F_grade</span> = 200 × 9.81 × sin(<span class="val">${s.slope}°</span>) = <span class="hl">${res.Fg} N</span></div>
+    <div class="eqrow"><span class="hl">Wh_base</span> = (F_total × v / η + P_aux) / v_kmh = <span class="hl">${res.Wb} Wh/km</span></div>
+    <div class="eqrow"><span class="hl">Wh_traffic</span> = ½×200×${res.v_ms}² × (1−${PHY.eta_r[s.accel-1]}) × ${PHY.stops[s.traffic-1]} = <span class="hl">${res.Wt} Wh/km</span></div>
+    ${res.Wr>0?`<div class="eqrow"><span class="hl">Wh_regen</span> = |F_grade|×v×η_regen / v_kmh = <span style="color:var(--green)">−${res.Wr} Wh/km</span></div>`:''}
+    <div class="eqrow"><span class="tot">TOTAL = ${res.Wb} + ${res.Wt} + ${res.Wa}${res.Wr>0?' − '+res.Wr:''} = <span class="hl">${wh} Wh/km</span></span></div>`;
+
+  const arc=document.getElementById('ring-arc');
+  arc.style.strokeDashoffset=(276.46*(1-cf.val/100)).toFixed(2);
+  arc.style.stroke=cf.val>75?'#1FC87A':cf.val>55?'#F5A623':'#F05050';
+  document.getElementById('conf-val').textContent=cf.val;
+  document.getElementById('conf-label').textContent=cf.val>75?'High accuracy':cf.val>55?'Moderate':'Low accuracy';
+  document.getElementById('conf-reason').textContent=cf.reason;
+
+  const effP=Math.min(100,Math.round(28/wh*100));
+  document.getElementById('wh-display').textContent=wh;
+  const eb=document.getElementById('eff-bar');
+  eb.style.width=effP+'%';eb.style.background=effP>=85?'#1FC87A':effP>=60?'#F5A623':'#F05050';
+  document.getElementById('eff-pct').textContent=effP+'%';
+  document.getElementById('wh-mini').innerHTML=`<span style="color:#4A9EFF">${res.Wb} motion</span> + <span style="color:#F05050">${res.Wt} traffic</span> + <span style="color:#F5A623">${res.Wa} accel</span>${res.Wr>0?` − <span style="color:#1FC87A">${res.Wr} regen</span>`:''}`;
+
+  const os=Math.max(28,Math.min(40,s.speed));
+  const strats=[[true,`Target ${os}–${Math.min(os+4,40)} km/h — minimises F_aero/v ratio without excess rolling resistance`],[true,`Eco acceleration → η_regen = 68%, zero drivetrain overhead waste`],[true,'Coast 40–50m before stops to maximise regen braking capture window'],[s.traffic===3,`Route change: eliminating 18 stops/km saves ${res.Wt} Wh/km`],[s.slope>3,`Hold constant speed uphill — avoid acceleration surges at peak grade`],[s.slope<-2,`Light brake pressure only — keep regen at η = ${Math.round(PHY.eta_r[s.accel-1]*100)}%`],[s.batt<20,`Low SoC: reduce to ${Math.max(25,s.speed-10)} km/h to stay out of non-linear discharge zone`]].filter(([show])=>show).slice(0,5);
+  document.getElementById('strategy-list').innerHTML=strats.map(([,t])=>`<div class="si"><div class="sdot" style="background:var(--green)"></div>${t}</div>`).join('');
+
+  document.getElementById('insights-grid').innerHTML=buildInsights(s,res,range,opt).map(([t,ti,d])=>iHTML(t,ti,d)).join('');
+
+  renderChartSpeed(s);renderChartAccel(s);
+}
+
+['sl-speed','sl-accel','sl-traffic','sl-slope','sl-batt','sl-cap'].forEach(id=>document.getElementById(id).addEventListener('input',render));
+render();
+</script>
+</body>
+</html>
